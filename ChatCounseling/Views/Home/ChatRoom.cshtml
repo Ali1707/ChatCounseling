@@ -1,0 +1,35 @@
+﻿@model IEnumerable<ChatCounseling.Models.Message>
+
+@{
+    ViewData["Title"] = "ChatRoom";
+}
+
+<h1>ChatRoom</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Body)
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @if (item.Sender.IsAdmin)
+                    {
+                        <p style="color:red">@item.Body</p>
+                    }else{
+                        @Html.DisplayFor(modelItem => item.Body)
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

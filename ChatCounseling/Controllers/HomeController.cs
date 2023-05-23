@@ -21,17 +21,65 @@ namespace ChatCounseling.Controllers
         }
 
         [Authorize]
-        public IActionResult Index()
+        public IActionResult ChatRoom()
         {
-            return View();
+            var userName = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var user = _context.Users.First(x => x.UserName == userName);
+
+            var chatRoom = _context.ChatRooms.FirstOrDefault(cr=>cr.Applicant.UserName == userName);
+            if(chatRoom == null)
+            {
+                _context.ChatRooms.Add(new ChatRoom
+                {
+                    ApplicantId = user.UserId,
+                    Applicant = user,
+                    messages = new List<Message>(),
+                });
+            }
+
+            return View(chatRoom.messages);
         }
 
+        [Authorize]
+        public IActionResult ChatRoom(int chatRoomId)
+        {
+            var userName = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var user = _context.Users.First(x => x.UserName == userName);
+            if (user.IsAdmin)
+            {
+                var chatRoom = _context.ChatRooms.FirstOrDefault(cr => cr.ChatRoomId == chatRoomId);
+                if (chatRoom == null)
+                {
+                    _context.ChatRooms.Add(new ChatRoom
+                    {
+                        ApplicantId = user.UserId,
+                        Applicant = user,
+                        messages = new List<Message>(),
+                    });
+                }
 
+                return View(chatRoom.messages);
+            }
+            return RedirectToAction(nameof(ChatRoom));
+        }
+
+        [Authorize]
+        public IActionResult Admin()
+        {
+            var userName = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var user = _context.Users.First(x => x.UserName == userName);
+            var chatRoom = _context.ChatRooms.ToList();
+            return View(chatRoom);
+        }
+
+        [Route("Login")]
         [HttpGet]
         public IActionResult Login()
         {
             return View();
         }
+
+        [Route("Login")]
         public IActionResult Login(string userName, string password)
         {
             if (userName == null || password == null)
@@ -49,16 +97,22 @@ namespace ChatCounseling.Controllers
             }
 
             SetCookie(userName);
-            return RedirectToAction("Index");
+            if (user.IsAdmin) 
+            {
+                return RedirectToAction("Admin");
+            }
+            return RedirectToAction("ChatRoom");
 
         }
 
         [HttpGet]
+        [Route("Register")]
         public IActionResult Register()
         {
             return View();
         }
-        public  IActionResult Register(string userName, string password)
+        [Route("Register")]
+        public IActionResult Register(string userName, string password)
         {
             if (userName == null || password == null)
             {
@@ -80,7 +134,7 @@ namespace ChatCounseling.Controllers
                 IsAdmin = false,
             });
             SetCookie(userName);
-            return RedirectToAction("Index");
+            return RedirectToAction("ChatRoom");
         }
 
         private void SetCookie(string userName)

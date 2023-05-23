@@ -1,0 +1,33 @@
+﻿@model IEnumerable<ChatCounseling.Models.ChatRoom>
+
+@{
+    ViewData["Title"] = "Admin";
+}
+
+<h1>Admin</h1>
+
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.ChatRoomId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ApplicantId)
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.ChatRoomId)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ApplicantId)
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

@@ -9,7 +9,7 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(option => {
-        option.LoginPath = "/Home/Login"; 
+        option.LoginPath = "/Login"; 
         option.ExpireTimeSpan = TimeSpan.FromDays(1);
     });
 
@@ -34,6 +34,6 @@ app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Home}/{action=ChatRoom}/{id?}");
 
 app.Run();
