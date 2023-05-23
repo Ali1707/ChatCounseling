@@ -1,12 +1,14 @@
-﻿namespace ChatCounseling.Models
+﻿
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace ChatCounseling.Models
 {
     public class ChatRoom
     {
+        [Key]
         public int ChatRoomId { get; set; }
-        public int ApplicantId { get; set; }
-
-
-        public List<Message> messages { get; set; }
-        public User Applicant { get; set; }
+        public string? Creator { get; set; }
+        public List<Message>? Messages { get; set; } = new List<Message>();
     }
 }

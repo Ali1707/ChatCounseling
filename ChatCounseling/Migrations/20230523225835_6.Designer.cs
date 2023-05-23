@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ChatCounseling.Migrations
 {
     [DbContext(typeof(Context))]
-    [Migration("20230523153422_InitDBMig")]
-    partial class InitDBMig
+    [Migration("20230523225835_6")]
+    partial class _6
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -32,12 +32,10 @@ namespace ChatCounseling.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ChatRoomId"));
 
-                    b.Property<int>("ApplicantId")
-                        .HasColumnType("int");
+                    b.Property<string>("Creator")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ChatRoomId");
-
-                    b.HasIndex("ApplicantId");
 
                     b.ToTable("ChatRooms");
                 });
@@ -57,20 +55,25 @@ namespace ChatCounseling.Migrations
                     b.Property<int>("ChatRoomId")
                         .HasColumnType("int");
 
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
                     b.HasKey("MessageId");
 
                     b.HasIndex("ChatRoomId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("ChatCounseling.Models.User", b =>
                 {
-                    b.Property<int>("Userid")
+                    b.Property<int>("UserId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Userid"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
 
                     b.Property<bool>("IsAdmin")
                         .HasColumnType("bit");
@@ -79,40 +82,93 @@ namespace ChatCounseling.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Username")
+                    b.Property<string>("UserName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("Userid");
+                    b.HasKey("UserId");
 
                     b.ToTable("Users");
+
+                    b.HasData(
+                        new
+                        {
+                            UserId = 1,
+                            IsAdmin = true,
+                            Password = "12345678",
+                            UserName = "Admin"
+                        });
                 });
 
-            modelBuilder.Entity("ChatCounseling.Models.ChatRoom", b =>
+            modelBuilder.Entity("ChatCounseling.Models.UserToChatRoom", b =>
                 {
-                    b.HasOne("ChatCounseling.Models.User", "Applicant")
-                        .WithMany()
-                        .HasForeignKey("ApplicantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
 
-                    b.Navigation("Applicant");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChatRoomId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChatRoomId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserToChatRooms");
                 });
 
             modelBuilder.Entity("ChatCounseling.Models.Message", b =>
                 {
                     b.HasOne("ChatCounseling.Models.ChatRoom", "ChatRoom")
-                        .WithMany("messages")
+                        .WithMany("Messages")
                         .HasForeignKey("ChatRoomId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("ChatCounseling.Models.User", "User")
+                        .WithMany("Messages")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("ChatRoom");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ChatCounseling.Models.UserToChatRoom", b =>
+                {
+                    b.HasOne("ChatCounseling.Models.ChatRoom", "ChatRoom")
+                        .WithMany()
+                        .HasForeignKey("ChatRoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ChatCounseling.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChatRoom");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ChatCounseling.Models.ChatRoom", b =>
                 {
-                    b.Navigation("messages");
+                    b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("ChatCounseling.Models.User", b =>
+                {
+                    b.Navigation("Messages");
                 });
 #pragma warning restore 612, 618
         }

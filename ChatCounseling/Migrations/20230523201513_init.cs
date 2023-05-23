@@ -5,43 +5,37 @@
 namespace ChatCounseling.Migrations
 {
     /// <inheritdoc />
-    public partial class InitDBMig : Migration
+    public partial class init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "Users",
-                columns: table => new
-                {
-                    Userid = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Username = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    IsAdmin = table.Column<bool>(type: "bit", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Users", x => x.Userid);
-                });
-
             migrationBuilder.CreateTable(
                 name: "ChatRooms",
                 columns: table => new
                 {
                     ChatRoomId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ApplicantId = table.Column<int>(type: "int", nullable: false)
+                    ApplicantUserName = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ChatRooms", x => x.ChatRoomId);
-                    table.ForeignKey(
-                        name: "FK_ChatRooms_Users_ApplicantId",
-                        column: x => x.ApplicantId,
-                        principalTable: "Users",
-                        principalColumn: "Userid",
-                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Users",
+                columns: table => new
+                {
+                    UserId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsAdmin = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Users", x => x.UserId);
                 });
 
             migrationBuilder.CreateTable(
@@ -51,6 +45,7 @@ namespace ChatCounseling.Migrations
                     MessageId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Body = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UserId = table.Column<int>(type: "int", nullable: false),
                     ChatRoomId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
@@ -62,17 +57,28 @@ namespace ChatCounseling.Migrations
                         principalTable: "ChatRooms",
                         principalColumn: "ChatRoomId",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Messages_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_ChatRooms_ApplicantId",
-                table: "ChatRooms",
-                column: "ApplicantId");
+            migrationBuilder.InsertData(
+                table: "Users",
+                columns: new[] { "UserId", "IsAdmin", "Password", "UserName" },
+                values: new object[] { 1, true, "12345678", "Admin" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Messages_ChatRoomId",
                 table: "Messages",
                 column: "ChatRoomId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Messages_UserId",
+                table: "Messages",
+                column: "UserId");
         }
 
         /// <inheritdoc />

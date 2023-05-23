@@ -3,22 +3,19 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ChatCounseling.Models
 {
-    public class Message
+    public class UserToChatRoom
     {
         [Key]
-        public int MessageId { get; set; }
-
-        [Required]
-        public string Body { get; set; }
-
-        [Required]
-        [ForeignKey("User")]
-        public int UserId { get; set; }
-        public User User { get; set; }
-
+        public int Id { get; set; }
         [Required]
         [ForeignKey("ChatRoom")]
         public int ChatRoomId { get; set; }
+        [Required]
+        [ForeignKey("User")]
+        public int UserId { get; set; }
+
+
+        public User User { get; set; }
         public ChatRoom ChatRoom { get; set; }
     }
 }

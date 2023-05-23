@@ -14,6 +14,7 @@ namespace ChatCounseling.Data
         public DbSet<User> Users { get; set; }
         public DbSet<ChatRoom> ChatRooms { get; set; }
         public DbSet<Message> Messages { get; set; }
+        public DbSet<UserToChatRoom> UserToChatRooms { get; set; }
 
 
 
@@ -25,7 +26,7 @@ namespace ChatCounseling.Data
                     UserName = "Admin",
                     Password = "12345678",
                     IsAdmin = true,
-                    UserId = 0
+                    UserId = 1
                 }
                 );
             base.OnModelCreating(modelBuilder);

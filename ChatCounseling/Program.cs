@@ -8,15 +8,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(option => {
-        option.LoginPath = "/Login"; 
+    .AddCookie(option =>
+    {
+        option.LoginPath = "/Login";
         option.ExpireTimeSpan = TimeSpan.FromDays(1);
     });
 
-builder.Services.AddDbContext<Context>( option=> 
-    {
-        option.UseSqlServer("Data Source =.; Initial Catalog= ChatCounselingDB; Integrated Security=True");
-    });
+builder.Services.AddDbContext<Context>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("ChatCounselingContext")));
 
 var app = builder.Build();
 
