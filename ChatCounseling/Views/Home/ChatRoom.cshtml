@@ -21,19 +21,30 @@
                 <td>
                     @if (item.User.IsAdmin)
                     {
-                        <p style="color:red">@item.Body</p>
+                        <p class="text-end" style="color:red">@item.Body</p>
                     }
                     else
                     {
-                        @Html.DisplayFor(modelItem => item.Body)
+                        <p class="text-start">@item.Body</p>
                     }
                 </td>
             </tr>
         }
     </tbody>
 </table>
-<form asp-action="SendMessage" method="post">
-    <textarea type="text" name="body" id="body"></textarea>
-    <input type="hidden" name="chatRoomId" id="chatRoomId" value="@ViewBag.ChatRoomId"/>
-    <input type="submit" value="Submit"/>
+
+<form asp-action="SendMessage" method="post" class="form-inline">
+    <div class="row">
+        <div class="form-group col-10">
+            <textarea class="form-control" type="text" name="body" id="body"></textarea>
+        </div>
+
+
+        <input type="hidden" name="chatRoomId" id="chatRoomId" value="@ViewBag.ChatRoomId" />
+
+
+        <div class="form-group col-2">
+            <input class="btn btn-primary" type="submit" value="Send" />
+        </div>
+    </div>
 </form>
