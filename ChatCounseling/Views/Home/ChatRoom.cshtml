@@ -4,11 +4,8 @@
     ViewData["Title"] = "ChatRoom";
 }
 
-<h1>ChatRoom</h1>
+<h1>گفت بگو</h1>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
 <table class="table">
     <thead>
         <tr>
@@ -25,7 +22,9 @@
                     @if (item.User.IsAdmin)
                     {
                         <p style="color:red">@item.Body</p>
-                    }else{
+                    }
+                    else
+                    {
                         @Html.DisplayFor(modelItem => item.Body)
                     }
                 </td>
@@ -33,6 +32,8 @@
         }
     </tbody>
 </table>
-<textarea>
-
-</textarea>
+<form asp-action="SendMessage" method="post">
+    <textarea type="text" name="body" id="body"></textarea>
+    <input type="hidden" name="chatRoomId" id="chatRoomId" value="@ViewBag.ChatRoomId"/>
+    <input type="submit" value="Submit"/>
+</form>

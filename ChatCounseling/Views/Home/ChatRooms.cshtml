@@ -1,0 +1,35 @@
+﻿@model IEnumerable<ChatCounseling.Models.ChatRoom>
+
+@{
+    ViewData["Title"] = "ChatRooms";
+}
+
+<h1>ChatRooms</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.ChatRoomId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Creator)
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.ChatRoomId)
+            </td>
+            <td>
+                    <a asp-action="ChatRoomForAdmin" asp-route-chatRoomId="@item.ChatRoomId"> @Html.DisplayFor(modelItem => item.Creator)</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

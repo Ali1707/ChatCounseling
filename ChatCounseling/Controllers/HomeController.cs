@@ -4,11 +4,13 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Security.Claims;
 
 namespace ChatCounseling.Controllers
 {
+//    [Route("[action]")]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
@@ -21,49 +23,69 @@ namespace ChatCounseling.Controllers
         }
 
         [Authorize]
-        public IActionResult ChatRoom()
+        public async Task<IActionResult> ChatRoom()
         {
             var userName = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var user = _context.Users.FirstOrDefault(x => x.UserName == userName);
-
-            if (user != null)
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == userName);
+            if (user == null)
             {
-                var userToChatRoom = _context.UserToChatRooms.FirstOrDefault(cr => cr.UserId == user.UserId);
-                var chatRoom = _context.ChatRooms.FirstOrDefault(c => c.ChatRoomId == userToChatRoom.ChatRoomId);
-                return View(chatRoom.Messages);
+                return RedirectToAction(nameof(Login));
             }
-            return RedirectToAction(nameof(Login));
+            if (user.IsAdmin)
+            {
+                return RedirectToAction(nameof(ChatRooms));
+            }
+            var userToChatRoom = await _context.UserToChatRooms.FirstOrDefaultAsync(cr => cr.UserId == user.UserId);
+
+            if (userToChatRoom == null)
+            {
+                return RedirectToAction(nameof(Login));
+            }
+            var chatRoom = await _context.ChatRooms.FirstOrDefaultAsync(c => c.ChatRoomId == userToChatRoom.ChatRoomId);
+            if (chatRoom == null)
+            {
+                return RedirectToAction(nameof(Login));
+            }
+            var messages = await _context.Messages.Include(m => m.User).Where(x => x.ChatRoomId == chatRoom.ChatRoomId).ToListAsync();
+            ViewBag.ChatRoomId = chatRoom.ChatRoomId;
+            return View(messages);
+
         }
 
         [Authorize]
-        public IActionResult ChatRoomForAdmin(int chatRoomId)
+        public async Task<IActionResult> ChatRoomForAdmin(int chatRoomId)
         {
             var userName = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var user = _context.Users.First(x => x.UserName == userName);
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == userName);
             if (user != null && user.IsAdmin)
             {
-                var chatRoom = _context.ChatRooms.FirstOrDefault(cr => cr.ChatRoomId == chatRoomId);
-
-                return View(nameof(ChatRoom), chatRoom.Messages);
+                var chatRoom = await _context.ChatRooms.FirstOrDefaultAsync(cr => cr.ChatRoomId == chatRoomId);
+                if (chatRoom == null)
+                {
+                    return RedirectToAction(nameof(ChatRooms));
+                }
+                var messages = await _context.Messages.Include(m=>m.User).Where(x => x.ChatRoomId == chatRoom.ChatRoomId).ToListAsync();
+                ViewBag.ChatRoomId = chatRoom.ChatRoomId;
+                return View(nameof(ChatRoom), messages);
             }
             return RedirectToAction(nameof(ChatRoom));
         }
 
         [Authorize]
-        public IActionResult ChatRooms()
+        public async Task<IActionResult> ChatRooms()
         {
             var userName = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var user = _context.Users.First(x => x.UserName == userName);
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == userName);
             if (user != null && user.IsAdmin)
             {
-                var chatRooms = _context.ChatRooms.ToList();
+                var chatRooms = await _context.ChatRooms.ToListAsync();
                 return View(chatRooms);
             }
 
             return RedirectToAction(nameof(Login));
         }
-
-        [Route(nameof(Login))]
+        #region login logout cookie register
+        
         [HttpGet]
         public IActionResult Login()
         {
@@ -71,13 +93,13 @@ namespace ChatCounseling.Controllers
         }
 
         [Route(nameof(Login))]
-        public IActionResult Login(string userName, string password)
+        public async Task<IActionResult> Login(string userName, string password)
         {
             if (userName == null || password == null)
             {
                 return View();
             }
-            var user = _context.Users.FirstOrDefault(u => u.UserName == userName.ToLower() && u.Password == password.ToLower());
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == userName.ToLower() && u.Password == password.ToLower());
             if (user == null)
             {
                 ModelState.AddModelError("UserName", "User is not exit");
@@ -88,7 +110,7 @@ namespace ChatCounseling.Controllers
                 });
             }
 
-            SetCookie(userName);
+            await SetCookie(userName);
             if (user.IsAdmin)
             {
                 return RedirectToAction(nameof(ChatRooms));
@@ -98,19 +120,18 @@ namespace ChatCounseling.Controllers
         }
 
         [HttpGet]
-        [Route("Register")]
         public IActionResult Register()
         {
             return View();
         }
-        [Route("Register")]
-        public IActionResult Register(string userName, string password)
+        
+        public async Task<IActionResult> Register(string userName, string password)
         {
             if (userName == null || password == null)
             {
                 return View();
             }
-            var user = _context.Users.FirstOrDefault(u => u.UserName == userName.ToLower());
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == userName.ToLower());
             if (user != null)
             {
                 ModelState.AddModelError("UserName", "this User is exit");
@@ -120,43 +141,43 @@ namespace ChatCounseling.Controllers
                     Password = password
                 });
             }
-            var newUser = new User
+            var newUserModel = new User
             {
                 UserName = userName.ToLower(),
                 Password = password.ToLower(),
                 IsAdmin = false,
             };
 
-            _context.Users.Add(newUser);
+            _context.Users.Add(newUserModel);
             
             _context.SaveChanges();
             
-            var userid = _context.Users.FirstOrDefault(u => u.UserName == newUser.UserName && u.Password == newUser.Password).UserId;
-
+            var newUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == newUserModel.UserName && u.Password == newUserModel.Password);
+            var userId = newUser.UserId;
             var newChaRoom = new Models.ChatRoom()
             {
                 Creator = newUser.UserName,
             };
 
-            _context.ChatRooms.Add(newChaRoom);
+            await _context.ChatRooms.AddAsync(newChaRoom);
             
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
-            var chatRoomId = _context.ChatRooms.FirstOrDefault(c => c.Creator == newUser.UserName).ChatRoomId;
-
+            var chatRoom = await _context.ChatRooms.FirstOrDefaultAsync(c => c.Creator == newUser.UserName);
+            var chatRoomId = chatRoom.ChatRoomId;
             _context.UserToChatRooms.Add(new UserToChatRoom()
             {
-                UserId = userid,
+                UserId = userId,
                 ChatRoomId = chatRoomId
             });
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
-            SetCookie(userName);
+            await SetCookie(userName);
             
             return RedirectToAction(nameof(ChatRoom));
         }
 
-        private void SetCookie(string userName)
+        private async Task SetCookie(string userName)
         {
             var claims = new List<Claim>
             {
@@ -168,19 +189,50 @@ namespace ChatCounseling.Controllers
             {
                 IsPersistent = true,
             };
-            HttpContext.SignInAsync(principal, properties);
+            await HttpContext.SignInAsync(principal, properties);
         }
 
-        [Route("Logout")]
-        public IActionResult logout()
+        public async Task<IActionResult> logout()
         {
-            HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction(nameof(Login));
         }
+        #endregion
 
+        [Authorize]
+        public async Task<IActionResult> SendMessage(string body,int chatRoomId)
+        {
 
-
-
+            var userName = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == userName);
+            var chatRoom = await _context.ChatRooms.FirstOrDefaultAsync(c => c.ChatRoomId == chatRoomId);
+            if (user == null || chatRoom == null )
+            {
+                return RedirectToAction("Login");
+            }
+            if (!user.IsAdmin)
+            {
+                if(user.UserName != chatRoom.Creator)
+                {
+                    return RedirectToAction("Login");
+                }
+            }
+            var message = new Message()
+            {
+                Body = body,
+                User = user,
+                UserId = user.UserId,
+                ChatRoom=chatRoom,
+                ChatRoomId=chatRoomId,
+            };
+            await _context.Messages.AddAsync(message);
+            await _context.SaveChangesAsync();
+            if (user.IsAdmin)
+            {
+                return RedirectToAction(nameof(ChatRoomForAdmin),new { chatRoomId });
+            }
+            return RedirectToAction(nameof(ChatRoom));
+        }
 
 
 
