@@ -7,10 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Security.Claims;
+using ZarinpalSandbox;
 
 namespace ChatCounseling.Controllers
 {
-//    [Route("[action]")]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
@@ -48,6 +48,7 @@ namespace ChatCounseling.Controllers
             }
             var messages = await _context.Messages.Include(m => m.User).Where(x => x.ChatRoomId == chatRoom.ChatRoomId).ToListAsync();
             ViewBag.ChatRoomId = chatRoom.ChatRoomId;
+            ViewBag.CanSendMessage = user.CanSendMessage;
             return View(messages);
 
         }
@@ -64,8 +65,9 @@ namespace ChatCounseling.Controllers
                 {
                     return RedirectToAction(nameof(ChatRooms));
                 }
-                var messages = await _context.Messages.Include(m=>m.User).Where(x => x.ChatRoomId == chatRoom.ChatRoomId).ToListAsync();
+                var messages = await _context.Messages.Include(m => m.User).Where(x => x.ChatRoomId == chatRoom.ChatRoomId).ToListAsync();
                 ViewBag.ChatRoomId = chatRoom.ChatRoomId;
+                ViewBag.CanSendMessage = true;
                 return View(nameof(ChatRoom), messages);
             }
             return RedirectToAction(nameof(ChatRoom));
@@ -85,7 +87,7 @@ namespace ChatCounseling.Controllers
             return RedirectToAction(nameof(Login));
         }
         #region login logout cookie register
-        
+
         [HttpGet]
         public IActionResult Login()
         {
@@ -124,7 +126,7 @@ namespace ChatCounseling.Controllers
         {
             return View();
         }
-        
+
         public async Task<IActionResult> Register(string userName, string password)
         {
             if (userName == null || password == null)
@@ -146,12 +148,13 @@ namespace ChatCounseling.Controllers
                 UserName = userName.ToLower(),
                 Password = password.ToLower(),
                 IsAdmin = false,
+                CanSendMessage = true,
             };
 
             _context.Users.Add(newUserModel);
-            
+
             _context.SaveChanges();
-            
+
             var newUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == newUserModel.UserName && u.Password == newUserModel.Password);
             var userId = newUser.UserId;
             var newChaRoom = new Models.ChatRoom()
@@ -160,7 +163,7 @@ namespace ChatCounseling.Controllers
             };
 
             await _context.ChatRooms.AddAsync(newChaRoom);
-            
+
             await _context.SaveChangesAsync();
 
             var chatRoom = await _context.ChatRooms.FirstOrDefaultAsync(c => c.Creator == newUser.UserName);
@@ -173,7 +176,7 @@ namespace ChatCounseling.Controllers
             await _context.SaveChangesAsync();
 
             await SetCookie(userName);
-            
+
             return RedirectToAction(nameof(ChatRoom));
         }
 
@@ -200,21 +203,33 @@ namespace ChatCounseling.Controllers
         #endregion
 
         [Authorize]
-        public async Task<IActionResult> SendMessage(string body,int chatRoomId)
+        public async Task<IActionResult> SendMessage(string body, int chatRoomId)
         {
 
             var userName = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == userName);
             var chatRoom = await _context.ChatRooms.FirstOrDefaultAsync(c => c.ChatRoomId == chatRoomId);
-            if (user == null || chatRoom == null )
+            if (user == null || chatRoom == null)
             {
                 return RedirectToAction("Login");
             }
             if (!user.IsAdmin)
             {
-                if(user.UserName != chatRoom.Creator)
+                if (user.UserName != chatRoom.Creator)
                 {
                     return RedirectToAction("Login");
+                }
+                var userMessage = await _context.Messages.Include(m=>m.User).Where(m=>m.User==user).ToListAsync();
+
+                if (userMessage.Count != 0)
+                {
+                    if(userMessage.Count % 4 == 0)
+                    {
+                        user.CanSendMessage = false;
+                        _context.Update(user);
+                        await _context.SaveChangesAsync();
+                        return RedirectToAction(nameof(ChatRoom));
+                    }
                 }
             }
             var message = new Message()
@@ -222,18 +237,68 @@ namespace ChatCounseling.Controllers
                 Body = body,
                 User = user,
                 UserId = user.UserId,
-                ChatRoom=chatRoom,
-                ChatRoomId=chatRoomId,
+                ChatRoom = chatRoom,
+                ChatRoomId = chatRoomId,
             };
             await _context.Messages.AddAsync(message);
             await _context.SaveChangesAsync();
             if (user.IsAdmin)
             {
-                return RedirectToAction(nameof(ChatRoomForAdmin),new { chatRoomId });
+                return RedirectToAction(nameof(ChatRoomForAdmin), new { chatRoomId });
             }
             return RedirectToAction(nameof(ChatRoom));
         }
 
+
+        public async Task<IActionResult> Payment()
+        {
+            var userName = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == userName);
+            if (user == null)
+            {
+                return RedirectToAction("Login");
+            }
+            var payment = new Payment(10000);
+            var result = await payment.PaymentRequest("اشتراک ارسال پیام", "http://localhost:5106/CheckPayment");
+            if (result.Status == 100)
+            {
+                return Redirect("https://sandbox.zarinpal.com/pg/StartPay/" + result.Authority);
+            }
+            else
+            {
+                return RedirectToAction("Login");
+            }
+        }
+        public async Task<IActionResult> CheckPayment(string authority, string status)
+        {
+            var userName = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == userName);
+            if (status.ToLower() == "ok" && authority != null && user != null)
+            {
+                var payment = new Payment(10000);
+                var result = await payment.Verification(authority);
+                if (result.Status == 100)
+                {
+                    user.CanSendMessage = true;
+                    _context.Update(user);
+                    await _context.SaveChangesAsync();
+
+                    var userMessages = await _context.Messages.Include(m => m.User).Include(m => m.ChatRoom).Where(m => m.User == user).ToListAsync();
+                    var chatRoom = userMessages.First().ChatRoom;
+                    _context.Messages.Add(new Message
+                    {
+                        Body = "پرداخت یا موفقیت انجام شد",
+                        UserId = user.UserId,
+                        User = user,
+                        ChatRoom = chatRoom,
+                        ChatRoomId = chatRoom.ChatRoomId
+                    });
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(ChatRoom));
+                }
+            }
+            return RedirectToAction("Login");
+        }
 
 
 

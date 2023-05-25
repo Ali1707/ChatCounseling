@@ -6,6 +6,7 @@ namespace ChatCounseling.Models
     {
         [Key]
         public int UserId { get; set; }
+
         [Required]
         public string UserName { get; set; }
 
@@ -14,6 +15,9 @@ namespace ChatCounseling.Models
         public string Password { get; set; }
 
         public bool IsAdmin { get; set; } = false;
+
+        public bool CanSendMessage { get; set; }
+        
 
         public List<Message>? Messages { get; set; } = new List<Message>();
 

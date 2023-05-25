@@ -26,7 +26,8 @@ namespace ChatCounseling.Data
                     UserName = "Admin",
                     Password = "12345678",
                     IsAdmin = true,
-                    UserId = 1
+                    UserId = 1,
+                    CanSendMessage = true,
                 }
                 );
             base.OnModelCreating(modelBuilder);

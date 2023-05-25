@@ -32,19 +32,23 @@
         }
     </tbody>
 </table>
+@if (ViewBag.CanSendMessage)
+{
+    <form asp-action="SendMessage" method="post" class="form-inline">
+        <div class="row">
+            <div class="form-group col-10">
+                <textarea class="form-control" type="text" name="body" id="body"></textarea>
+            </div>
 
-<form asp-action="SendMessage" method="post" class="form-inline">
-    <div class="row">
-        <div class="form-group col-10">
-            <textarea class="form-control" type="text" name="body" id="body"></textarea>
+
+            <input type="hidden" name="chatRoomId" id="chatRoomId" value="@ViewBag.ChatRoomId" />
+
+
+            <div class="form-group col-2">
+                <input class="btn btn-primary" type="submit" value="Send" />
+            </div>
         </div>
-
-
-        <input type="hidden" name="chatRoomId" id="chatRoomId" value="@ViewBag.ChatRoomId" />
-
-
-        <div class="form-group col-2">
-            <input class="btn btn-primary" type="submit" value="Send" />
-        </div>
-    </div>
-</form>
+    </form>
+}else{
+    <a class="btn btn-primary" asp-action="Payment">خرید اشتراک برای ارسال پیام</a>
+}
